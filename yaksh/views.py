@@ -49,6 +49,8 @@ from .send_emails import (send_user_mail,
 from .decorators import email_verified, has_profile
 
 
+
+
 def my_redirect(url):
     """An overridden redirect to deal with URL_ROOT-ing. See settings.py
     for details."""
@@ -102,7 +104,7 @@ def index(request, next_url=None):
     """The start page.
     """
     user = request.user
-    if user.is_authenticated():
+    if user.is_authenticated:
         if is_moderator(user):
             return my_redirect('/exam/manage/' if not next_url else next_url)
         return my_redirect("/exam/quizzes/" if not next_url else next_url)
@@ -115,7 +117,7 @@ def user_register(request):
     Create a user and corresponding profile and store roll_number also."""
 
     user = request.user
-    if user.is_authenticated():
+    if user.is_authenticated:
         return my_redirect("/exam/quizzes/")
     context = {}
     if request.method == "POST":
@@ -391,7 +393,7 @@ def prof_manage(request, msg=None):
     """Take credentials of the user with professor/moderator
     rights/permissions and log in."""
     user = request.user
-    if not user.is_authenticated():
+    if not user.is_authenticated:
         return my_redirect('/exam/login')
     if not is_moderator(user):
         return my_redirect('/exam/')
@@ -429,7 +431,7 @@ def user_login(request):
 
     user = request.user
     context = {}
-    if user.is_authenticated():
+    if user.is_authenticated:
         return index(request)
 
     next_url = request.GET.get('next')
@@ -1033,6 +1035,7 @@ def courses(request):
         teachers=user, is_trial=False).order_by('-active', '-id')
     context = {'courses': courses, "allotted_courses": allotted_courses,
                "type": "courses"}
+    
     return my_render_to_response(request, 'yaksh/courses.html', context)
 
 
@@ -1201,7 +1204,7 @@ def monitor(request, quiz_id=None, course_id=None):
     """Monitor the progress of the papers taken so far."""
 
     user = request.user
-    if not user.is_authenticated() or not is_moderator(user):
+    if not user.is_authenticated or not is_moderator(user):
         raise Http404('You are not allowed to view this page!')
 
     if quiz_id is None:
@@ -1234,11 +1237,13 @@ def monitor(request, quiz_id=None, course_id=None):
         else:
             attempt_numbers = []
         latest_attempts = []
-        papers = AnswerPaper.objects.filter(question_paper=q_paper,
-                                            course_id=course_id).order_by(
+        papers = AnswerPaper.objects.filter(question_paper__in=q_paper,
+                                            course_id__in=course_id).order_by(
             'user__profile__roll_number'
         )
         users = papers.values_list('user').distinct()
+        
+
         for auser in users:
             last_attempt = papers.filter(user__in=auser).aggregate(
                 last_attempt_num=Max('attempt_number')
@@ -1527,7 +1532,7 @@ def show_all_questions(request):
 def user_data(request, user_id, questionpaper_id=None, course_id=None):
     """Render user data."""
     current_user = request.user
-    if not current_user.is_authenticated() or not is_moderator(current_user):
+    if not current_user.is_authenticated or not is_moderator(current_user):
         raise Http404('You are not allowed to view this page!')
     user = User.objects.get(id=user_id)
     data = AnswerPaper.objects.get_user_data(user, questionpaper_id, course_id)
@@ -1629,20 +1634,25 @@ def grade_user(request, quiz_id=None, user_id=None, attempt_number=None,
     """Present an interface with which we can easily grade a user's papers
     and update all their marks and also give comments for each paper.
     """
+    
     current_user = request.user
-    if not current_user.is_authenticated() or not is_moderator(current_user):
+    if not current_user.is_authenticated or not is_moderator(current_user):
         raise Http404('You are not allowed to view this page!')
     course_details = Course.objects.filter(Q(creator=current_user) |
                                            Q(teachers=current_user),
                                            is_trial=False).distinct()
     context = {"course_details": course_details}
+
+    
     if quiz_id is not None:
         questionpaper_id = QuestionPaper.objects.filter(
             quiz_id=quiz_id
         ).values("id")
+        
         user_details = AnswerPaper.objects.get_users_for_questionpaper(
             questionpaper_id, course_id
         )
+        
         quiz = get_object_or_404(Quiz, id=quiz_id)
         course = get_object_or_404(Course, id=course_id)
         if not course.is_creator(current_user) and not \
@@ -1650,7 +1660,7 @@ def grade_user(request, quiz_id=None, user_id=None, attempt_number=None,
             raise Http404('This course does not belong to you')
 
         has_quiz_assignments = AssignmentUpload.objects.filter(
-                                question_paper_id=questionpaper_id
+                                question_paper_id__in=questionpaper_id
                                 ).exists()
         context = {
             "users": user_details,
@@ -1659,23 +1669,30 @@ def grade_user(request, quiz_id=None, user_id=None, attempt_number=None,
             "has_quiz_assignments": has_quiz_assignments,
             "course_id": course_id
         }
+
+
         if user_id is not None:
             attempts = AnswerPaper.objects.get_user_all_attempts(
                 questionpaper_id, user_id, course_id
             )
+            
             try:
                 if attempt_number is None:
                     attempt_number = attempts[0].attempt_number
             except IndexError:
                 raise Http404('No attempts for paper')
             has_user_assignments = AssignmentUpload.objects.filter(
-                                question_paper_id=questionpaper_id,
-                                user_id=user_id
+                                question_paper_id__in=questionpaper_id,
+                                user_id__in=user_id
                                 ).exists()
+            
             user = User.objects.get(id=user_id)
+            
+            
             data = AnswerPaper.objects.get_user_data(
                 user, questionpaper_id, course_id, attempt_number
             )
+            
             context = {
                 "data": data,
                 "quiz_id": quiz_id,
@@ -1686,6 +1703,7 @@ def grade_user(request, quiz_id=None, user_id=None, attempt_number=None,
                 "has_quiz_assignments": has_quiz_assignments,
                 "course_id": course_id
             }
+
     if request.method == "POST":
         papers = data['papers']
         for paper in papers:
@@ -1703,6 +1721,7 @@ def grade_user(request, quiz_id=None, user_id=None, attempt_number=None,
         course_status = CourseStatus.objects.filter(course=course, user=user)
         if course_status.exists():
             course_status.first().set_grade()
+    
 
     return my_render_to_response(request, 'yaksh/grade_user.html', context)
 

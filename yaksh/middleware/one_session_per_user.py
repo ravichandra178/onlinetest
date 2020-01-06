@@ -1,10 +1,10 @@
 from django.contrib.auth.models import User
 from django.contrib.sessions.models import Session
-
+from django.utils.deprecation import MiddlewareMixin
 from yaksh.models import ConcurrentUser
 
 
-class OneSessionPerUserMiddleware(object):
+class OneSessionPerUserMiddleware(MiddlewareMixin):
     """
     Middleware to handle multiple logins with same credentials
         - Creates a Database entry to record the current user and active

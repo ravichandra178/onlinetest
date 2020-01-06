@@ -1,9 +1,9 @@
 import pytz
 
 from django.utils import timezone
+from django.utils.deprecation import MiddlewareMixin
 
-
-class TimezoneMiddleware(object):
+class TimezoneMiddleware(MiddlewareMixin):
     """ Middleware to get user's timezone and activate timezone
         if user timezone is not available default value 'Asia/Kolkata'
         is activated

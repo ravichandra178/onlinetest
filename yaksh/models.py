@@ -39,6 +39,8 @@ from django.conf import settings
 from django.forms.models import model_to_dict
 from grades.models import GradingSystem
 
+
+
 languages = (
         ("python", "Python"),
         ("bash", "Bash"),
@@ -257,7 +259,7 @@ class Lesson(models.Model):
     html_data = models.TextField(null=True, blank=True)
 
     # Creator of the lesson
-    creator = models.ForeignKey(User)
+    creator = models.ForeignKey(User,on_delete=models.CASCADE)
 
     # Activate/Deactivate Lesson
     active = models.BooleanField(default=True)
@@ -327,7 +329,7 @@ class Lesson(models.Model):
 
 #############################################################################
 class LessonFile(models.Model):
-    lesson = models.ForeignKey(Lesson, related_name="lesson")
+    lesson = models.ForeignKey(Lesson, related_name="lesson",on_delete=models.CASCADE)
     file = models.FileField(upload_to=get_file_dir, default=None)
 
     def remove(self):
@@ -475,7 +477,7 @@ class Quiz(models.Model):
 
     is_exercise = models.BooleanField(default=False)
 
-    creator = models.ForeignKey(User, null=True)
+    creator = models.ForeignKey(User, null=True,on_delete = models.CASCADE)
 
     objects = QuizManager()
 
@@ -491,7 +493,7 @@ class Quiz(models.Model):
             end_date_time=timezone.now() + timedelta(176590),
             duration=30, active=True,
             attempts_allowed=-1, time_between_attempts=0,
-            description='Yaksh Demo quiz', pass_criteria=0,
+            description='Demo quiz', pass_criteria=0,
             creator=user, instructions="<b>This is a demo quiz.</b>"
         )
         return demo_quiz
@@ -590,8 +592,8 @@ class LearningUnit(models.Model):
     """ Maintain order of lesson and quiz added in the course """
     order = models.IntegerField()
     type = models.CharField(max_length=16)
-    lesson = models.ForeignKey(Lesson, null=True, blank=True)
-    quiz = models.ForeignKey(Quiz, null=True, blank=True)
+    lesson = models.ForeignKey(Lesson, null=True, blank=True,on_delete = models.CASCADE)
+    quiz = models.ForeignKey(Quiz, null=True, blank=True,on_delete=models.CASCADE)
     check_prerequisite = models.BooleanField(default=True)
 
     def get_lesson_or_quiz(self):
@@ -654,7 +656,7 @@ class LearningModule(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(default=None, null=True, blank=True)
     order = models.IntegerField(default=0)
-    creator = models.ForeignKey(User, related_name="module_creator")
+    creator = models.ForeignKey(User, related_name="module_creator",on_delete=models.CASCADE)
     check_prerequisite = models.BooleanField(default=True)
     check_prerequisite_passes = models.BooleanField(default=False)
     html_data = models.TextField(null=True, blank=True)
@@ -830,7 +832,7 @@ class Course(models.Model):
     active = models.BooleanField(default=True)
     code = models.CharField(max_length=128, null=True, blank=True)
     hidden = models.BooleanField(default=False)
-    creator = models.ForeignKey(User, related_name='creator')
+    creator = models.ForeignKey(User, related_name='creator',on_delete = models.CASCADE)
     students = models.ManyToManyField(User, related_name='students')
     requests = models.ManyToManyField(User, related_name='requests')
     rejected = models.ManyToManyField(User, related_name='rejected')
@@ -859,7 +861,7 @@ class Course(models.Model):
         null=True
     )
 
-    grading_system = models.ForeignKey(GradingSystem, null=True, blank=True)
+    grading_system = models.ForeignKey(GradingSystem, null=True, blank=True,on_delete=models.CASCADE)
 
     objects = CourseManager()
 
@@ -938,9 +940,9 @@ class Course(models.Model):
 
     def create_demo(self, user):
         course = Course.objects.filter(creator=user,
-                                       name="Yaksh Demo course").exists()
+                                       name="Demo course").exists()
         if not course:
-            course = Course.objects.create(name="Yaksh Demo course",
+            course = Course.objects.create(name="Demo course",
                                            enrollment="open",
                                            creator=user)
             quiz = Quiz()
@@ -1112,9 +1114,9 @@ class CourseStatus(models.Model):
     completed_units = models.ManyToManyField(LearningUnit,
                                              related_name="completed_units")
     current_unit = models.ForeignKey(LearningUnit, related_name="current_unit",
-                                     null=True, blank=True)
-    course = models.ForeignKey(Course)
-    user = models.ForeignKey(User)
+                                     null=True, blank=True,on_delete = models.CASCADE)
+    course = models.ForeignKey(Course,on_delete = models.CASCADE)
+    user = models.ForeignKey(User,on_delete = models.CASCADE)
     grade = models.CharField(max_length=255, null=True, blank=True)
     percentage = models.FloatField(default=0.0)
     percent_completed = models.IntegerField(default=0)
@@ -1163,14 +1165,14 @@ class CourseStatus(models.Model):
 
 ###############################################################################
 class ConcurrentUser(models.Model):
-    concurrent_user = models.OneToOneField(User)
+    concurrent_user = models.OneToOneField(User,on_delete = models.CASCADE)
     session_key = models.CharField(max_length=40)
 
 
 ###############################################################################
 class Profile(models.Model):
     """Profile for a user to store roll number and other details."""
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User,on_delete = models.CASCADE)
     roll_number = models.CharField(max_length=20)
     institute = models.CharField(max_length=128)
     department = models.CharField(max_length=64)
@@ -1248,7 +1250,7 @@ class Question(models.Model):
     snippet = models.TextField(blank=True)
 
     # user for particular question
-    user = models.ForeignKey(User, related_name="user")
+    user = models.ForeignKey(User, related_name="user",on_delete = models.CASCADE)
 
     # Does this question allow partial grading
     partial_grading = models.BooleanField(default=False)
@@ -1469,7 +1471,7 @@ class Question(models.Model):
 ###############################################################################
 class FileUpload(models.Model):
     file = models.FileField(upload_to=get_upload_dir, blank=True)
-    question = models.ForeignKey(Question, related_name="question")
+    question = models.ForeignKey(Question, related_name="question",on_delete = models.CASCADE)
     extract = models.BooleanField(default=False)
     hide = models.BooleanField(default=False)
 
@@ -1503,7 +1505,7 @@ class Answer(models.Model):
     """Answers submitted by the users."""
 
     # The question for which user answers.
-    question = models.ForeignKey(Question)
+    question = models.ForeignKey(Question,on_delete = models.CASCADE)
 
     # The answer submitted by the user.
     answer = models.TextField(null=True, blank=True)
@@ -1578,7 +1580,7 @@ class QuestionPaper(models.Model):
     """Question paper stores the detail of the questions."""
 
     # Question paper belongs to a particular quiz.
-    quiz = models.ForeignKey(Quiz)
+    quiz = models.ForeignKey(Quiz,on_delete = models.CASCADE)
 
     # Questions that will be mandatory in the quiz.
     fixed_questions = models.ManyToManyField(Question)
@@ -1788,6 +1790,7 @@ class AnswerPaperManager(models.Manager):
         papers = self.filter(question_paper_id=questionpaper_id,
                              course_id=course_id,
                              attempt_number=attempt_number, status=status)
+        logging.info('hi im in models')
         all_questions = list()
         questions = list()
         for paper in papers:
@@ -1795,6 +1798,7 @@ class AnswerPaperManager(models.Manager):
         for question in all_questions:
             questions.append(question.id)
         return Counter(questions)
+
 
     def get_all_questions_answered(self, questionpaper_id, attempt_number,
                                    course_id, status='completed'):
@@ -1864,11 +1868,11 @@ class AnswerPaperManager(models.Manager):
     def _get_answerpapers_for_quiz(self, questionpaper_id, course_id,
                                    status=False):
         if not status:
-            return self.filter(question_paper_id=questionpaper_id,
-                               course_id=course_id)
+            return self.filter(question_paper_id__in=questionpaper_id,
+                               course_id__in=course_id)
         else:
-            return self.filter(question_paper_id=questionpaper_id,
-                               course_id=course_id,
+            return self.filter(question_paper_id__in=questionpaper_id,
+                               course_id__in=course_id,
                                status="completed")
 
     def _get_answerpapers_users(self, answerpapers):
@@ -1909,23 +1913,29 @@ class AnswerPaperManager(models.Manager):
             .distinct()
 
     def get_user_all_attempts(self, questionpaper, user, course_id):
-        return self.filter(question_paper=questionpaper, user=user,
+        return self.filter(question_paper__in=questionpaper, user=user,
                            course_id=course_id)\
                             .order_by('-attempt_number')
 
     def get_user_data(self, user, questionpaper_id, course_id,
                       attempt_number=None):
+        
         if attempt_number is not None:
-            papers = self.filter(user=user, question_paper_id=questionpaper_id,
+            
+            papers = self.filter(user=user, question_paper_id__in=questionpaper_id,
                                  course_id=course_id,
                                  attempt_number=attempt_number)
+            
         else:
+            
             papers = self.filter(
                 user=user, question_paper_id=questionpaper_id,
                 course_id=course_id
             ).order_by("-attempt_number")
+        
         data = {}
         profile = user.profile if hasattr(user, 'profile') else None
+        
         data['user'] = user
         data['profile'] = profile
         data['papers'] = papers
@@ -1946,15 +1956,15 @@ class AnswerPaper(models.Model):
     """A answer paper for a student -- one per student typically.
     """
     # The user taking this question paper.
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User,on_delete = models.CASCADE)
 
     questions = models.ManyToManyField(Question, related_name='questions')
 
     # The Quiz to which this question paper is attached to.
-    question_paper = models.ForeignKey(QuestionPaper)
+    question_paper = models.ForeignKey(QuestionPaper,on_delete = models.CASCADE)
 
     # Answepaper will be unique to the course
-    course = models.ForeignKey(Course, null=True)
+    course = models.ForeignKey(Course, null=True,on_delete = models.CASCADE)
 
     # The attempt number for the question paper.
     attempt_number = models.IntegerField()
@@ -2374,17 +2384,17 @@ class AssignmentUploadManager(models.Manager):
 
 ##############################################################################
 class AssignmentUpload(models.Model):
-    user = models.ForeignKey(User)
-    assignmentQuestion = models.ForeignKey(Question)
+    user = models.ForeignKey(User,on_delete = models.CASCADE)
+    assignmentQuestion = models.ForeignKey(Question,on_delete = models.CASCADE)
     assignmentFile = models.FileField(upload_to=get_assignment_dir)
-    question_paper = models.ForeignKey(QuestionPaper, blank=True, null=True)
-    course = models.ForeignKey(Course, null=True, blank=True)
+    question_paper = models.ForeignKey(QuestionPaper, blank=True, null=True,on_delete = models.CASCADE)
+    course = models.ForeignKey(Course, null=True, blank=True,on_delete = models.CASCADE)
     objects = AssignmentUploadManager()
 
 
 ##############################################################################
 class TestCase(models.Model):
-    question = models.ForeignKey(Question, blank=True, null=True)
+    question = models.ForeignKey(Question, blank=True, null=True,on_delete = models.CASCADE)
     type = models.CharField(max_length=24, choices=test_case_types, null=True)
 
 
@@ -2521,10 +2531,10 @@ class TestCaseOrder(models.Model):
     """
 
     # Answerpaper of the user.
-    answer_paper = models.ForeignKey(AnswerPaper, related_name="answer_paper")
+    answer_paper = models.ForeignKey(AnswerPaper, related_name="answer_paper",on_delete = models.CASCADE)
 
     # Question in an answerpaper.
-    question = models.ForeignKey(Question)
+    question = models.ForeignKey(Question,on_delete = models.CASCADE)
 
     # Order of the test case for a question.
     order = models.TextField()
